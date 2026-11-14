@@ -1,0 +1,32 @@
+{
+  "name": "Unanime — le bon créneau, pour tout le monde",
+  "short_name": "Unanime",
+  "description": "Trouvez l'heure de réunion qui tombe dans les horaires de bureau de tous les participants, fuseaux horaires compris.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#060b13",
+  "theme_color": "#060b13",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

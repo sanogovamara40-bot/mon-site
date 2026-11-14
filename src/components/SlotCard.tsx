@@ -1,16 +1,36 @@
 import { dateKeyOf, dayOffset, formatDateLabel, formatTime, offsetLabel } from '../lib/time'
 import type { Column, Participant, WorkHours } from '../lib/planner'
-import { CopyIcon } from './Icons'
+import { CalendarPlusIcon, CopyIcon } from './Icons'
 
 type SlotCardProps = {
   participants: Participant[]
   column: Column
   dateKey: string
   work: WorkHours
+  title: string
+  duration: number
   onCopy: () => void
+  onExport: () => void
 }
 
-export function SlotCard({ participants, column, dateKey, work, onCopy }: SlotCardProps) {
+function durationLabel(minutes: number): string {
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60
+    return hours === 1 ? '1 h' : `${hours} h`
+  }
+  return `${minutes} min`
+}
+
+export function SlotCard({
+  participants,
+  column,
+  dateKey,
+  work,
+  title,
+  duration,
+  onCopy,
+  onExport,
+}: SlotCardProps) {
   const anchorDate = dateKeyOf(column.parts[0])
   const status = column.everyoneFree
     ? 'Tout le monde est disponible'
@@ -20,12 +40,14 @@ export function SlotCard({ participants, column, dateKey, work, onCopy }: SlotCa
     <section className="slot" aria-label="Détail du créneau sélectionné">
       <div className="slot__head">
         <div>
-          <p className="eyebrow">Créneau sélectionné</p>
+          <p className="eyebrow">{title.trim() || 'Créneau sélectionné'}</p>
           <p className="slot__time">
             {formatTime(column.parts[0])}
             <span className="slot__zone"> à {participants[0]?.city}</span>
           </p>
-          <p className="slot__date">{formatDateLabel(dateKey)}</p>
+          <p className="slot__date">
+            {formatDateLabel(dateKey)} · {durationLabel(duration)}
+          </p>
         </div>
         <span className={`pill ${column.everyoneFree ? 'pill--ok' : 'pill--warn'}`}>{status}</span>
       </div>
@@ -64,12 +86,19 @@ export function SlotCard({ participants, column, dateKey, work, onCopy }: SlotCa
 
       <div className="slot__actions">
         <p className="slot__hint">
-          Cliquez sur une autre heure de la grille pour comparer, ou copiez ce récapitulatif.
+          Copiez le récapitulatif, ou ajoutez le créneau à votre agenda — l'invitation
+          contient l'heure de chaque ville.
         </p>
-        <button type="button" className="btn btn--ghost btn--sm" onClick={onCopy}>
-          <CopyIcon className="btn__icon" />
-          Copier le récapitulatif
-        </button>
+        <div className="slot__buttons">
+          <button type="button" className="btn btn--ghost btn--sm" onClick={onCopy}>
+            <CopyIcon className="btn__icon" />
+            Copier
+          </button>
+          <button type="button" className="btn btn--primary btn--sm" onClick={onExport}>
+            <CalendarPlusIcon className="btn__icon" />
+            Ajouter à l'agenda · {durationLabel(duration)}
+          </button>
+        </div>
       </div>
     </section>
   )

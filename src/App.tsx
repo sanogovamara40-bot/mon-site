@@ -13,6 +13,7 @@ import {
 } from './components/Icons'
 import { findCity } from './data/cities'
 import type { City } from './data/cities'
+import { buildIcs, downloadIcs, icsFilename } from './lib/ics'
 import { bestWindow, buildColumns, defaultHour, suggestColumns } from './lib/planner'
 import type { Participant, WorkHours } from './lib/planner'
 import {
@@ -27,12 +28,16 @@ import './App.css'
 
 const DEFAULT_ZONES = ['Europe/Paris', 'Europe/London', 'America/New_York']
 const DEFAULT_WORK: WorkHours = { start: 9, end: 18 }
-const STORAGE_KEY = 'overlap:v1'
+const DEFAULT_DURATION = 60
+const DURATIONS = [30, 45, 60, 90]
+const STORAGE_KEY = 'unanime:v1'
 
 type Stored = {
   zones: string[]
   start: number
   end: number
+  title?: string
+  duration?: number
 }
 
 function isValidZone(zone: string): boolean {
@@ -61,6 +66,15 @@ function sanitizeWork(start: number, end: number): WorkHours | null {
   return { start, end }
 }
 
+function sanitizeTitle(value: unknown): string {
+  return typeof value === 'string' ? value.trim().slice(0, 80) : ''
+}
+
+function sanitizeDuration(value: unknown): number {
+  const duration = Number(value)
+  return DURATIONS.includes(duration) ? duration : DEFAULT_DURATION
+}
+
 function cityForZone(zone: string): Participant {
   return (
     findCity(zone) ?? {
@@ -87,6 +101,8 @@ function readStored(): Stored | null {
       zones,
       start: work?.start ?? DEFAULT_WORK.start,
       end: work?.end ?? DEFAULT_WORK.end,
+      title: sanitizeTitle(value.title),
+      duration: sanitizeDuration(value.duration),
     }
   } catch {
     return null
@@ -97,6 +113,8 @@ type Boot = {
   participants: Participant[]
   work: WorkHours
   dateKey: string
+  title: string
+  duration: number
 }
 
 function readBoot(): Boot {
@@ -125,6 +143,8 @@ function readBoot(): Boot {
     participants: participants.length > 0 ? participants : DEFAULT_ZONES.map(cityForZone),
     work,
     dateKey: isValidDateKey(dateParam) ? dateParam : todayKey(anchorZone),
+    title: sanitizeTitle(params.get('n') ?? stored?.title),
+    duration: sanitizeDuration(params.get('dur') ?? stored?.duration),
   }
 }
 
@@ -162,6 +182,8 @@ function App() {
   const [participants, setParticipants] = useState<Participant[]>(boot.participants)
   const [work, setWork] = useState<WorkHours>(boot.work)
   const [dateKey, setDateKey] = useState(boot.dateKey)
+  const [title, setTitle] = useState(boot.title)
+  const [duration, setDuration] = useState(boot.duration)
   const [selectedHour, setSelectedHour] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [toast, setToast] = useState<string | null>(null)
@@ -179,12 +201,14 @@ function App() {
           zones: participants.map((participant) => participant.zone),
           start: work.start,
           end: work.end,
+          title,
+          duration,
         }),
       )
     } catch {
       // Storage can be unavailable (private mode, quota); the app still works.
     }
-  }, [participants, work])
+  }, [participants, work, title, duration])
 
   useEffect(() => {
     const params = new URLSearchParams()
@@ -192,9 +216,11 @@ function App() {
     params.set('d', dateKey)
     params.set('s', String(work.start))
     params.set('e', String(work.end))
+    if (title) params.set('n', title)
+    params.set('dur', String(duration))
     const nextUrl = `${window.location.pathname}?${params.toString()}`
     window.history.replaceState(null, '', nextUrl)
-  }, [participants, work, dateKey])
+  }, [participants, work, dateKey, title, duration])
 
   useEffect(() => {
     if (!toast) return
@@ -254,13 +280,38 @@ function App() {
 
   const copySummary = async () => {
     const summary = [
-      `${formatDateLabel(dateKey)} — ${formatTime(selected.parts[0])} (${participants[0]?.city})`,
+      `${title.trim() || 'Réunion'} — ${formatDateLabel(dateKey)}, ${formatTime(selected.parts[0])} (${participants[0]?.city})`,
       ...participants.map(
         (participant, index) => `${formatTime(selected.parts[index])} ${participant.city}`,
       ),
     ].join(' · ')
     const copied = await copyText(summary)
     setToast(copied ? 'Récapitulatif copié.' : 'Copie impossible dans ce navigateur.')
+  }
+
+  const exportIcs = () => {
+    const start = selected.instant
+    const end = start + duration * 60_000
+    const description = [
+      formatDateLabel(dateKey),
+      ...participants.map(
+        (participant, index) =>
+          `${formatTime(selected.parts[index])} — ${participant.city}`,
+      ),
+      '',
+      'Créé avec Unanime',
+    ].join('\n')
+
+    const content = buildIcs({
+      start,
+      end,
+      title: title.trim() || 'Réunion',
+      description,
+      url: window.location.href,
+    })
+
+    downloadIcs(icsFilename(dateKey, selected.parts[0].hour, selected.parts[0].minute), content)
+    setToast('Agenda téléchargé — ouvrez le fichier .ics pour l’ajouter.')
   }
 
   return (
@@ -271,7 +322,7 @@ function App() {
             <BrandMark className="brand__icon" />
           </span>
           <div className="brand__text">
-            <h1 className="brand__name">Overlap</h1>
+            <h1 className="brand__name">Unanime</h1>
             <p className="brand__tagline">Trouvez l'heure qui arrange tout le monde.</p>
           </div>
         </div>
@@ -370,6 +421,37 @@ function App() {
               </label>
             </div>
             <p className="hint">Appliqué à tous, dans l'heure locale de chaque ville.</p>
+          </div>
+
+          <div className="controls__meeting">
+            <div className="panel__head">
+              <h2>Réunion</h2>
+            </div>
+            <input
+              className="meeting__name"
+              type="text"
+              value={title}
+              maxLength={80}
+              placeholder="Ex. Point d'équipe"
+              aria-label="Nom de la réunion"
+              onChange={(event) => setTitle(event.target.value)}
+            />
+            <label className="hours__field meeting__duration">
+              <span>Durée</span>
+              <select
+                value={duration}
+                aria-label="Durée de la réunion"
+                onChange={(event) => setDuration(sanitizeDuration(event.target.value))}
+              >
+                {DURATIONS.map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    {minutes % 60 === 0
+                      ? `${minutes / 60} h${minutes > 60 ? ' ' : ''}`
+                      : `${minutes} min`}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         </section>
 
@@ -506,13 +588,16 @@ function App() {
             column={selected}
             dateKey={dateKey}
             work={work}
+            title={title}
+            duration={duration}
             onCopy={copySummary}
+            onExport={exportIcs}
           />
         </section>
       </main>
 
       <footer className="site-footer">
-        <span>Overlap · la réunion qui tombe juste, pour tout le monde.</span>
+        <span>Unanime · la réunion qui tombe juste, pour tout le monde.</span>
         <span>Calculs 100 % locaux.</span>
       </footer>
 

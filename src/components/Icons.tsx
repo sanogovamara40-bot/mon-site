@@ -53,6 +53,15 @@ export function CalendarIcon({ className }: IconProps) {
   )
 }
 
+export function CalendarPlusIcon({ className }: IconProps) {
+  return (
+    <svg {...strokeProps} className={className} aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+      <path d="M3.5 9.5h17M8 3.5V6M16 3.5V6M12 12.5v5M9.5 15h5" />
+    </svg>
+  )
+}
+
 export function ShareIcon({ className }: IconProps) {
   return (
     <svg {...strokeProps} className={className} aria-hidden="true">

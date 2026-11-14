@@ -1,8 +1,8 @@
-# Overlap
+# Unanime
 
 **Le bon créneau, pour tout le monde.**
 
-Overlap est un planificateur de réunion entre fuseaux horaires. Il superpose les
+Unanime est un planificateur de réunion entre fuseaux horaires. Il superpose les
 horaires de bureau de chaque participant sur une même grille de 24 heures, met en
 évidence les créneaux qui conviennent à tout le monde, et propose les heures les
 moins contraignantes quand aucun recouvrement parfait n'existe.
@@ -18,9 +18,16 @@ moins contraignantes quand aucun recouvrement parfait n'existe.
   recouvrement parfait.
 - **Horaires personnalisables** (par défaut 9h–18h), appliqués dans l'heure locale
   de chaque ville.
-- **Partage** : l'URL encode les villes, la date et les horaires ; les participants
-  et les réglages sont aussi conservés en `localStorage`.
-- **100 % local** : aucun serveur, aucune donnée envoyée.
+- **Réunion nommée et durée** : nom libre et durée (30 min à 1 h 30) reprises dans
+  le récapitulatif et l'invitation.
+- **Export agenda** : un fichier `.ics` du créneau sélectionné, avec l'heure locale
+  de chaque participant dans la description, compatible Google Agenda, Outlook et
+  Apple Calendrier.
+- **Partage** : l'URL encode les villes, la date, les horaires, le nom et la durée ;
+  les participants et les réglages sont aussi conservés en `localStorage`.
+- **Installable** : manifeste et service worker — l'app s'ajoute à l'écran d'accueil
+  et reste consultable hors ligne après la première visite.
+- **100 % local** : aucun serveur, aucune donnée envoyée, aucun compte.
 
 ## Démarrer
 
@@ -57,6 +64,7 @@ src/
   lib/
     time.ts               conversions et formatage des fuseaux
     planner.ts            colonnes, recouvrement, suggestions
+    ics.ts                génération du fichier agenda (.ics)
     *.test.ts             tests unitaires
 ```
 
