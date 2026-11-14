@@ -106,7 +106,10 @@ export function formatTime(parts: Pick<ZoneParts, 'hour' | 'minute'>): string {
 }
 
 export function offsetLabel(instant: number, timeZone: string): string {
-  const minutes = Math.round(zoneOffsetMs(instant, timeZone) / 60000)
+  // Align on the minute: zoneOffsetMs compares a wall clock (no seconds) with
+  // the instant, so a mid-minute timestamp would shave a minute off the offset.
+  const minuteInstant = Math.floor(instant / 60_000) * 60_000
+  const minutes = Math.round(zoneOffsetMs(minuteInstant, timeZone) / 60000)
   if (minutes === 0) return 'UTC'
   const sign = minutes > 0 ? '+' : '−'
   const absolute = Math.abs(minutes)

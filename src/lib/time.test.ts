@@ -74,3 +74,16 @@ describe('formatTime', () => {
     expect(formatTime({ hour: 9, minute: 30 })).toBe('9h30')
   })
 })
+
+describe('offsetLabel', () => {
+  it('ignores the seconds of the instant', () => {
+    const winter = Date.UTC(2026, 10, 14, 12, 37, 42, 830)
+    expect(offsetLabel(winter, 'Europe/Paris')).toBe('UTC+1')
+    expect(offsetLabel(winter, 'America/New_York')).toBe('UTC−5')
+    expect(offsetLabel(winter, 'Asia/Kolkata')).toBe('UTC+5:30')
+  })
+
+  it('follows daylight saving time', () => {
+    expect(offsetLabel(Date.UTC(2026, 6, 14, 12, 0, 0), 'Europe/Paris')).toBe('UTC+2')
+  })
+})
