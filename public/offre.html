@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#060b13" />
+    <meta
+      name="description"
+      content="Unanime trouve l'heure de réunion qui respecte les horaires de bureau de chaque ville. Gratuit pour commencer, 29 €/mois pour l'équipe."
+    />
+    <title>Offre Unanime — la réunion qui tombe juste</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #060b13;
+        --panel: #0f1827;
+        --line: rgba(148, 178, 214, 0.14);
+        --line-strong: rgba(148, 178, 214, 0.28);
+        --text: #e8eef8;
+        --muted: #93a4bd;
+        --faint: #677a94;
+        --accent: #2dd4bf;
+        --accent-strong: #5eead4;
+        --accent-soft: rgba(45, 212, 191, 0.13);
+        font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--bg);
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        line-height: 1.6;
+        background:
+          radial-gradient(1100px 620px at 6% -12%, rgba(20, 184, 166, 0.16), transparent 55%),
+          radial-gradient(900px 540px at 102% -10%, rgba(59, 130, 246, 0.14), transparent 55%),
+          radial-gradient(800px 520px at 50% 112%, rgba(14, 116, 144, 0.1), transparent 60%),
+          var(--bg);
+        background-attachment: fixed;
+      }
+
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(148, 178, 214, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(148, 178, 214, 0.035) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 20%, transparent 75%);
+      }
+
+      .wrap {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 28px 48px;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .site-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        padding: 26px 0 10px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        text-decoration: none;
+      }
+
+      .mark {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(145deg, #2dd4bf, #0e7490 55%, #1d4ed8);
+        box-shadow:
+          0 10px 30px rgba(45, 212, 191, 0.26),
+          inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        flex: none;
+      }
+
+      .mark svg {
+        width: 26px;
+        height: 26px;
+      }
+
+      .brand-name {
+        font-size: 22px;
+        font-weight: 750;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+      }
+
+      .brand-sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .header-link {
+        font-size: 13.5px;
+        color: var(--muted);
+        text-decoration: none;
+        border: 1px solid var(--line);
+        padding: 9px 15px;
+        border-radius: 999px;
+        transition: color 0.2s, border-color 0.2s;
+      }
+
+      .header-link:hover {
+        color: var(--text);
+        border-color: var(--line-strong);
+      }
+
+      .hero {
+        padding: 64px 0 44px;
+        max-width: 800px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 650;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+        background: var(--accent-soft);
+        border: 1px solid rgba(45, 212, 191, 0.25);
+        padding: 6px 12px;
+        border-radius: 999px;
+      }
+
+      h1 {
+        font-size: clamp(2.1rem, 5.2vw, 3.5rem);
+        line-height: 1.04;
+        letter-spacing: -0.04em;
+        margin: 18px 0;
+        font-weight: 760;
+      }
+
+      h1 em {
+        font-style: normal;
+        background: linear-gradient(100deg, #5eead4, #2dd4bf 45%, #60a5fa);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .lede {
+        font-size: clamp(1rem, 2vw, 1.16rem);
+        color: var(--muted);
+        max-width: 620px;
+        margin: 0 0 26px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 50px;
+        padding: 0 22px;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 650;
+        text-decoration: none;
+        border: 1px solid transparent;
+        transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #2dd4bf, #0e7490);
+        color: #02120f;
+        box-shadow: 0 12px 30px rgba(45, 212, 191, 0.22);
+      }
+
+      .btn-primary:hover {
+        box-shadow: 0 16px 36px rgba(45, 212, 191, 0.3);
+      }
+
+      .btn-ghost {
+        background: rgba(148, 178, 214, 0.06);
+        border-color: var(--line-strong);
+        color: var(--text);
+      }
+
+      .btn-ghost:hover {
+        border-color: rgba(148, 178, 214, 0.45);
+      }
+
+      .pills {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 22px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .pills li {
+        font-size: 12px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        background: rgba(148, 178, 214, 0.04);
+        padding: 6px 11px;
+        border-radius: 999px;
+      }
+
+      .section {
+        margin-top: 26px;
+        padding: 34px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(15, 24, 39, 0.9), rgba(15, 24, 39, 0.55));
+      }
+
+      .kicker {
+        font-size: 11.5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--faint);
+        margin: 0 0 8px;
+        font-weight: 650;
+      }
+
+      h2 {
+        font-size: clamp(1.35rem, 2.6vw, 1.8rem);
+        letter-spacing: -0.025em;
+        margin: 0 0 10px;
+        line-height: 1.2;
+      }
+
+      .section p {
+        color: var(--muted);
+        margin: 0;
+        max-width: 700px;
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 24px;
+      }
+
+      .step {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(6, 11, 19, 0.45);
+      }
+
+      .step b {
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+
+      .step h3 {
+        margin: 0 0 6px;
+        font-size: 14.5px;
+      }
+
+      .step p {
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .pricing {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 24px;
+      }
+
+      .plan {
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(6, 11, 19, 0.4);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .plan.featured {
+        border-color: rgba(45, 212, 191, 0.45);
+        background: linear-gradient(160deg, rgba(45, 212, 191, 0.1), rgba(6, 11, 19, 0.35));
+        box-shadow: 0 18px 50px rgba(45, 212, 191, 0.08);
+      }
+
+      .plan-tag {
+        font-size: 10.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+        font-weight: 700;
+      }
+
+      .price {
+        font-size: 34px;
+        font-weight: 760;
+        letter-spacing: -0.04em;
+        line-height: 1;
+      }
+
+      .price span {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted);
+        letter-spacing: 0;
+      }
+
+      .plan p {
+        font-size: 13px;
+      }
+
+      .plan ul {
+        list-style: none;
+        margin: 8px 0 0;
+        padding: 0;
+        display: grid;
+        gap: 7px;
+      }
+
+      .plan li {
+        font-size: 13px;
+        color: var(--muted);
+        padding-left: 20px;
+        position: relative;
+      }
+
+      .plan li::before {
+        content: '✓';
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .note {
+        font-size: 12px;
+        color: var(--faint);
+        margin-top: 14px;
+      }
+
+      .faq {
+        margin-top: 20px;
+        display: grid;
+        gap: 10px;
+      }
+
+      details {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(6, 11, 19, 0.35);
+        padding: 0 16px;
+      }
+
+      summary {
+        cursor: pointer;
+        padding: 14px 0;
+        font-size: 14px;
+        font-weight: 600;
+        list-style: none;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+
+      summary::-webkit-details-marker {
+        display: none;
+      }
+
+      summary::after {
+        content: '+';
+        color: var(--accent);
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      details[open] summary::after {
+        content: '−';
+      }
+
+      details p {
+        padding: 0 0 16px;
+        font-size: 13.5px;
+        line-height: 1.6;
+      }
+
+      .cta {
+        text-align: center;
+        padding: 40px 28px;
+      }
+
+      .cta p {
+        margin: 0 auto 22px;
+      }
+
+      .cta .actions {
+        justify-content: center;
+      }
+
+      .mail {
+        display: block;
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .mail a {
+        color: var(--accent-strong);
+        text-decoration: none;
+      }
+
+      .mail a:hover {
+        text-decoration: underline;
+      }
+
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 26px 4px 0;
+        font-size: 12px;
+        color: var(--faint);
+      }
+
+      footer a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      footer a:hover {
+        color: var(--text);
+      }
+
+      @media (max-width: 760px) {
+        .steps,
+        .pricing {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          padding: 44px 0 34px;
+        }
+
+        .section {
+          padding: 24px;
+        }
+
+        .wrap {
+          padding: 0 18px 36px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto;
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site-header">
+        <a class="brand" href="/" aria-label="Unanime, accueil">
+          <span class="mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none">
+              <circle cx="13" cy="16" r="6.6" stroke="#eafffb" stroke-width="2.1" />
+              <circle cx="19" cy="16" r="6.6" stroke="#eafffb" stroke-width="2.1" />
+              <path d="M16 14.4V16l1.6 1.1" stroke="#eafffb" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span>
+            <span class="brand-name">Unanime</span>
+            <span class="brand-sub">Le bon créneau, pour tout le monde.</span>
+          </span>
+        </a>
+        <a class="header-link" href="/">Ouvrir l'app →</a>
+      </header>
+
+      <main>
+        <section class="hero">
+          <p class="eyebrow">Offre équipe</p>
+          <h1>La réunion qui <em>tombe juste</em>, pour toute l'équipe.</h1>
+          <p class="lede">
+            Unanime trouve l'heure qui respecte les horaires de bureau de chaque
+            ville. Vos équipes arrêtent de calculer, de comparer et d'envoyer des
+            captures d'écran.
+          </p>
+          <div class="actions">
+            <a class="btn btn-primary" href="#contact">Demander une démo de 10 min</a>
+            <a class="btn btn-ghost" href="/">Essayer gratuitement</a>
+          </div>
+          <ul class="pills">
+            <li>Gratuit</li>
+            <li>Sans compte</li>
+            <li>100 % local</li>
+            <li>Export agenda</li>
+          </ul>
+        </section>
+        <section class="section" aria-labelledby="probleme">
+          <p class="kicker">Le problème</p>
+          <h2 id="probleme">15 h à Paris, 9 h à New York, 14 h à Londres.</h2>
+          <p>
+            Une réunion entre trois fuseaux demande trois conversions, deux
+            vérifications et souvent un message d'excuse. Unanime superpose les
+            horaires de bureau de chaque ville et montre directement le créneau
+            qui convient à tout le monde.
+          </p>
+          <div class="steps">
+            <div class="step">
+              <b>1</b>
+              <h3>Ajoutez vos villes</h3>
+              <p>Paris, Londres, New York, Abidjan… décalages et changements d'heure sont gérés.</p>
+            </div>
+            <div class="step">
+              <b>2</b>
+              <h3>Voyez le créneau commun</h3>
+              <p>Les heures où chacun est dans ses horaires sont surlignées, le meilleur créneau est mis en avant.</p>
+            </div>
+            <div class="step">
+              <b>3</b>
+              <h3>Exportez l'invitation</h3>
+              <p>Nom, durée, heure locale de chacun : un fichier .ics prêt pour Google Agenda ou Outlook.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="offre" aria-labelledby="tarifs">
+          <p class="kicker">Tarifs</p>
+          <h2 id="tarifs">Gratuit pour essayer. 29 €/mois pour l'équipe.</h2>
+          <p>
+            L'outil reste gratuit, sans compte et sans limite. L'offre équipe
+            ajoute la mise en place, le support et la facture.
+          </p>
+          <div class="pricing">
+            <div class="plan">
+              <span class="plan-tag">Gratuit</span>
+              <div class="price">0 € <span>pour toujours</span></div>
+              <p>Pour une personne qui compare des villes de temps en temps.</p>
+              <ul>
+                <li>Réunions illimitées</li>
+                <li>Tous les fuseaux et demi-décalages</li>
+                <li>Export agenda .ics</li>
+                <li>Liens partageables</li>
+                <li>Sans compte, 100 % local</li>
+              </ul>
+              <a class="btn btn-ghost" href="/" style="margin-top: 12px">Ouvrir l'app</a>
+            </div>
+            <div class="plan featured">
+              <span class="plan-tag">Équipe · offre de lancement</span>
+              <div class="price">29 € <span>/ mois</span></div>
+              <p>Pour les agences et studios qui travaillent sur 3 fuseaux ou plus.</p>
+              <ul>
+                <li>Tout le gratuit, pour l'équipe</li>
+                <li>Villes et horaires par défaut configurés</li>
+                <li>Mise en place en visio (30 min)</li>
+                <li>Support prioritaire e-mail / WhatsApp</li>
+                <li>Facture en euros, sans engagement</li>
+              </ul>
+              <a class="btn btn-primary" href="#contact" style="margin-top: 12px">Demander une démo</a>
+            </div>
+          </div>
+          <p class="note">
+            14 jours d'essai, sans carte. Paiement par virement, Wise ou Orange
+            Money. Jusqu'à 15 personnes par équipe.
+          </p>
+        </section>
+        <section class="section" aria-labelledby="faq">
+          <p class="kicker">Questions fréquentes</p>
+          <h2 id="faq">Avant de réserver.</h2>
+          <div class="faq">
+            <details>
+              <summary>Combien de personnes par équipe ?</summary>
+              <p>Jusqu'à 15. Au-delà, écrivez-moi : on adapte l'offre.</p>
+            </details>
+            <details>
+              <summary>Où sont stockées les données ?</summary>
+              <p>Dans le navigateur de chaque participant. Aucune ville, aucun nom de réunion n'est envoyé à un serveur.</p>
+            </details>
+            <details>
+              <summary>Ça remplace Google Agenda ou Calendly ?</summary>
+              <p>Non. Unanime intervient avant l'invitation : il trouve l'heure qui respecte les horaires de bureau, puis exporte un fichier .ics à ajouter à votre agenda.</p>
+            </details>
+            <details>
+              <summary>Et si aucun horaire ne convient à tout le monde ?</summary>
+              <p>Unanime propose les trois créneaux les moins contraignants, classés par gêne minimale.</p>
+            </details>
+            <details>
+              <summary>Comment se passe le paiement ?</summary>
+              <p>Facture en euros : virement, Wise ou Orange Money pour la Côte d'Ivoire. Sans engagement, on arrête à la fin du mois.</p>
+            </details>
+            <details>
+              <summary>Ça marche sur téléphone ?</summary>
+              <p>Oui. L'app s'installe sur l'écran d'accueil et reste consultable hors ligne après la première visite.</p>
+            </details>
+          </div>
+        </section>
+
+        <section class="section cta" id="contact" aria-labelledby="contact-titre">
+          <p class="kicker">Démo</p>
+          <h2 id="contact-titre">Dix minutes, avec vos vraies villes.</h2>
+          <p>
+            Je vous montre le créneau de votre prochaine réunion, en direct. Pas
+            de présentation commerciale, pas d'installation.
+          </p>
+          <div class="actions">
+            <a
+              class="btn btn-primary"
+              href="mailto:sanogovamara40@gmail.com?subject=Demande%20de%20d%C3%A9mo%20Unanime&body=Bonjour%2C%0A%0AJe%20souhaite%20une%20d%C3%A9mo%20de%2010%20minutes%20d%27Unanime.%0A%0AEntreprise%20%3A%20%0AVilles%20%2F%20fuseaux%20%3A%20%0ADisponibilit%C3%A9s%20%3A%20%0A%0AMerci%20%21"
+              >Demander une démo</a
+            >
+          </div>
+          <span class="mail">
+            Ou écrivez à
+            <a href="mailto:sanogovamara40@gmail.com?subject=Demande%20de%20d%C3%A9mo%20Unanime"
+              >sanogovamara40@gmail.com</a
+            >.
+          </span>
+        </section>
+      </main>
+
+      <footer>
+        <span>Unanime · la réunion qui tombe juste, pour tout le monde.</span>
+        <span><a href="/">L'app</a> · Calculs 100 % locaux.</span>
+      </footer>
+    </div>
+  </body>
+</html>

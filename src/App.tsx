@@ -598,7 +598,7 @@ function App() {
 
       <footer className="site-footer">
         <span>Unanime · la réunion qui tombe juste, pour tout le monde.</span>
-        <span>Calculs 100 % locaux.</span>
+        <span><a href="/offre">Offre équipe</a> · Calculs 100 % locaux.</span>
       </footer>
 
       {toast && (
