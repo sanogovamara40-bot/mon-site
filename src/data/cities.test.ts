@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findCity, searchCities } from './cities'
+import { CITIES, findCity, searchCities } from './cities'
 
 describe('findCity', () => {
   it('prefers the canonical city for a shared zone', () => {
@@ -11,6 +11,16 @@ describe('findCity', () => {
   it('returns undefined for an unknown zone', () => {
     expect(findCity('Mars/Olympus')).toBeUndefined()
   })
+
+  it('has exactly one canonical city per zone', () => {
+    const zones = new Map<string, number>()
+    for (const city of CITIES) {
+      if (city.primary) zones.set(city.zone, (zones.get(city.zone) ?? 0) + 1)
+    }
+    for (const [zone, count] of zones) {
+      expect(count, `${zone} should have one primary city`).toBe(1)
+    }
+  })
 })
 
 describe('searchCities', () => {
@@ -18,6 +28,14 @@ describe('searchCities', () => {
     expect(searchCities('sao paulo')[0]?.city).toBe('São Paulo')
     expect(searchCities('japon').map((city) => city.city)).toContain('Tokyo')
     expect(searchCities('par')[0]?.city).toBe('Paris')
+  })
+
+  it('finds African and francophone cities', () => {
+    expect(searchCities('abidjan')[0]?.city).toBe('Abidjan')
+    expect(searchCities('côte d’ivoire')[0]?.city).toBe('Abidjan')
+    expect(searchCities('dakar')[0]?.city).toBe('Dakar')
+    expect(searchCities('montreal')[0]?.city).toBe('Montréal')
+    expect(searchCities('yaounde')[0]?.city).toBe('Yaoundé')
   })
 
   it('limits results', () => {
