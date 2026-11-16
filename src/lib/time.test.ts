@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   dayOffset,
+  formatDateLabel,
   formatTime,
   offsetLabel,
   shiftDateKey,
@@ -85,5 +86,12 @@ describe('offsetLabel', () => {
 
   it('follows daylight saving time', () => {
     expect(offsetLabel(Date.UTC(2026, 6, 14, 12, 0, 0), 'Europe/Paris')).toBe('UTC+2')
+  })
+})
+
+describe('formatDateLabel', () => {
+  it('uses « 1er » for the first day of the month', () => {
+    expect(formatDateLabel('2027-01-01')).toBe('vendredi 1er janvier 2027')
+    expect(formatDateLabel('2026-11-17')).toBe('mardi 17 novembre 2026')
   })
 })

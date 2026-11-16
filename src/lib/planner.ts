@@ -77,14 +77,18 @@ export function bestWindow(columns: Column[]): { start: number; end: number } | 
   return best ? { start: best.start, end: best.start + best.length } : null
 }
 
+export function leastConstrained(columns: Column[]): Column {
+  return columns.reduce(
+    (best, column) => (column.penalty < best.penalty ? column : best),
+    columns[0],
+  )
+}
+
 export function defaultHour(columns: Column[]): number {
   const window = bestWindow(columns)
   if (window) return window.start + Math.floor((window.end - window.start - 1) / 2)
 
-  return columns.reduce(
-    (best, column) => (column.penalty < best.penalty ? column : best),
-    columns[0],
-  ).hour
+  return leastConstrained(columns).hour
 }
 
 export function suggestColumns(columns: Column[], limit = 3): Column[] {

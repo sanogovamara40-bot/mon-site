@@ -14,7 +14,7 @@ import {
 import { findCity } from './data/cities'
 import type { City } from './data/cities'
 import { buildIcs, downloadIcs, icsFilename } from './lib/ics'
-import { bestWindow, buildColumns, defaultHour, suggestColumns } from './lib/planner'
+import { bestWindow, buildColumns, defaultHour, leastConstrained, suggestColumns } from './lib/planner'
 import type { Participant, WorkHours } from './lib/planner'
 import {
   formatDateLabel,
@@ -241,6 +241,7 @@ function App() {
       : autoHour
   const selected = columns.find((column) => column.hour === effectiveHour) ?? columns[0]
   const suggestions = useMemo(() => suggestColumns(columns), [columns])
+  const fallback = useMemo(() => leastConstrained(columns), [columns])
 
   const addParticipant = (city: City) => {
     setParticipants((current) =>
@@ -527,7 +528,7 @@ function App() {
               <div className="best__body">
                 <p className="eyebrow">Pas de recouvrement parfait</p>
                 <p className="best__value">
-                  Le moins contraignant : {suggestions[0].hour}h <span>à {anchor.city}</span>
+                  Le moins contraignant : {fallback.hour}h <span>à {anchor.city}</span>
                 </p>
                 <p className="best__hint">
                   Aucune heure ne tombe dans toutes les plages de bureau — ces suggestions
@@ -535,7 +536,7 @@ function App() {
                 </p>
               </div>
               <span className="pill pill--warn">
-                {suggestions[0].available}/{participants.length} dispo
+                {fallback.available}/{participants.length} dispo
               </span>
             </div>
           )}

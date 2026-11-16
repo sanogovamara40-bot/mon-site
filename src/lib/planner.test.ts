@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bestWindow, buildColumns, defaultHour, suggestColumns } from './planner'
+import { bestWindow, buildColumns, defaultHour, leastConstrained, suggestColumns } from './planner'
 import type { Participant, WorkHours } from './planner'
 
 const paris: Participant = {
@@ -86,6 +86,20 @@ describe('buildColumns', () => {
     expect(columns.every((column) => column.everyoneFree)).toBe(true)
     expect(bestWindow(columns)).toEqual({ start: 0, end: 24 })
   })
+
+  it('recommends the truly least constrained hour without a shared window', () => {
+    const columns = buildColumns('2026-11-16', 'Europe/Paris', [paris, london, newYork], {
+      start: 22,
+      end: 24,
+    })
+    const fallback = leastConstrained(columns)
+
+    expect(bestWindow(columns)).toBeNull()
+    expect(fallback.hour).toBe(23)
+    expect(fallback.available).toBe(2)
+    expect(columns.every((column) => column.penalty >= fallback.penalty)).toBe(true)
+    expect(defaultHour(columns)).toBe(23)
+  })
 })
 
 describe('suggestColumns', () => {
@@ -102,7 +116,8 @@ describe('suggestColumns', () => {
     for (let index = 1; index < suggestions.length; index += 1) {
       expect(suggestions[index].hour - suggestions[index - 1].hour).toBeGreaterThanOrEqual(2)
     }
-    expect(suggestions[0].penalty).toBeLessThanOrEqual(suggestions[1].penalty)
+    const minPenalty = Math.min(...columns.map((column) => column.penalty))
+    expect(Math.min(...suggestions.map((suggestion) => suggestion.penalty))).toBe(minPenalty)
   })
 
   it('respects a custom limit', () => {

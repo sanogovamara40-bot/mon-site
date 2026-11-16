@@ -128,5 +128,6 @@ const longDateFormatter = new Intl.DateTimeFormat('fr-FR', {
 
 export function formatDateLabel(key: string): string {
   const { year, month, day } = parseDateKey(key)
-  return longDateFormatter.format(new Date(Date.UTC(year, month - 1, day)))
+  const label = longDateFormatter.format(new Date(Date.UTC(year, month - 1, day)))
+  return day === 1 ? label.replace(' 1 ', ' 1er ') : label
 }
