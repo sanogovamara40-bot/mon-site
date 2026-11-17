@@ -1390,3 +1390,10 @@
     grid-template-columns: 136px repeat(24, minmax(38px, 1fr));
   }
 }
+
+/* Textarea temporaire pour le fallback navigator.clipboard : service sans style inline,
+   afin que la CSP puisse interdire 'unsafe-inline' pour les styles. */
+.clipboard-helper {
+  position: fixed;
+  opacity: 0;
+}

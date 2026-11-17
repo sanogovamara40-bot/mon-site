@@ -18,6 +18,7 @@ export function CityPicker({ selectedZones, now, onSelect }: CityPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const results = useMemo(() => searchCities(query), [query])
+  const active = results.length > 0 ? Math.min(activeIndex, results.length - 1) : -1
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -46,7 +47,7 @@ export function CityPicker({ selectedZones, now, onSelect }: CityPickerProps) {
       if (results.length) setActiveIndex((index) => (index - 1 + results.length) % results.length)
     } else if (event.key === 'Enter') {
       event.preventDefault()
-      const city = results[Math.min(activeIndex, results.length - 1)]
+      const city = results[active]
       if (city) choose(city)
     } else if (event.key === 'Escape') {
       setOpen(false)
@@ -65,6 +66,7 @@ export function CityPicker({ selectedZones, now, onSelect }: CityPickerProps) {
         aria-expanded={open}
         aria-controls="city-listbox"
         aria-autocomplete="list"
+        aria-activedescendant={open && active >= 0 ? `city-option-${active}` : undefined}
         aria-label="Ajouter une ville"
         placeholder="Ajouter une ville…"
         autoComplete="off"
@@ -89,12 +91,13 @@ export function CityPicker({ selectedZones, now, onSelect }: CityPickerProps) {
             return (
               <li
                 key={`${city.zone}-${city.city}`}
+                id={`city-option-${index}`}
                 role="option"
-                aria-selected={index === activeIndex}
+                aria-selected={index === active}
                 aria-disabled={alreadyAdded}
                 className={[
                   'picker__option',
-                  index === activeIndex ? 'is-active' : '',
+                  index === active ? 'is-active' : '',
                   alreadyAdded ? 'is-added' : '',
                 ]
                   .filter(Boolean)
