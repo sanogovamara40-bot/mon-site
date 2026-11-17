@@ -9,13 +9,15 @@ moins contraignantes quand aucun recouvrement parfait n'existe.
 
 ## Fonctionnalités
 
-- **Grille horaire** : 24 colonnes (heure locale du premier participant), une ligne
-  par ville, avec les changements de jour (`+1j` / `−1j`) et les décalages à la
+- **Grille horaire** : une colonne par heure UTC de la journée du premier
+  participant (23 au passage à l'heure d'été, 25 à l'heure d'hiver), une ligne par
+  ville, avec les changements de jour (`+1j` / `−1j`) et les décalages à la
   demi-heure (Inde, Népal…).
 - **Recouvrement** : les heures où tout le monde est dans ses horaires de bureau
-  sont surlignées, et le meilleur créneau est mis en avant.
-- **Suggestions** : trois créneaux classés par « gêne » minimale, même sans
-  recouvrement parfait.
+  sont surlignées, et le meilleur créneau — assez long pour la durée choisie — est
+  mis en avant.
+- **Suggestions** : trois créneaux classés par « gêne » minimale sur toute la durée
+  de la réunion, même sans recouvrement parfait.
 - **Horaires personnalisables** (par défaut 9h–18h), appliqués dans l'heure locale
   de chaque ville.
 - **Réunion nommée et durée** : nom libre et durée (30 min à 1 h 30) reprises dans
@@ -45,10 +47,11 @@ navigateur) : aucun package de dates, aucune table d'offsets à maintenir. La
 conversion « heure murale → instant UTC » itère l'offset pour rester juste lors des
 changements d'heure.
 
-Pour chaque heure de la journée, on calcule l'heure locale de chaque participant,
-puis un score de gêne : 0 si la personne est dans ses horaires, sinon la distance
-(en minutes) au bord le plus proche. Le premier créneau libre est le milieu du plus
-long intervalle où le score total est nul.
+Pour chaque instant UTC de la journée, on calcule l'heure locale de chaque
+participant, puis un score de gêne : 0 si la personne est dans ses horaires, sinon
+la distance (en minutes) au bord le plus proche. Le créneau recommandé est le
+milieu du plus long intervalle où le score total est nul **et qui contient toute la
+durée de la réunion** ; à défaut, on minimise la gêne cumulée sur cette durée.
 
 ## Structure
 

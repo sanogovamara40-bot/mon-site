@@ -1,4 +1,4 @@
-import { dateKeyOf, dayOffset, formatDateLabel, formatTime, offsetLabel } from '../lib/time'
+import { dateKeyOf, dayOffset, dayShiftLabel, formatDateLabel, formatTime, offsetLabel } from '../lib/time'
 import type { Column, Participant, WorkHours } from '../lib/planner'
 import { CalendarPlusIcon, CopyIcon } from './Icons'
 
@@ -69,11 +69,7 @@ export function SlotCard({
               <div className="slot__person-bottom">
                 <span className="slot__local">
                   {formatTime(part)}
-                  {shift !== 0 && (
-                    <span className="slot__day">
-                      {shift > 0 ? '+1 jour' : '−1 jour'}
-                    </span>
-                  )}
+                  {shift !== 0 && <span className="slot__day">{dayShiftLabel(shift)}</span>}
                 </span>
                 <span className={`slot__status ${inWork ? 'is-ok' : 'is-off'}`}>
                   {inWork ? 'Dans les horaires' : 'Hors horaires'}

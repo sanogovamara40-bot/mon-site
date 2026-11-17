@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildIcs, escapeIcsText, foldIcsLine, icsFilename } from './ics'
+import { buildIcs, escapeIcsText, foldIcsLine, icsFilename, meetingDescription } from './ics'
 
 describe('escapeIcsText', () => {
   it('escapes separators and newlines', () => {
@@ -93,6 +93,40 @@ describe('buildIcs', () => {
     for (const line of ics.split('\r\n')) {
       expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75)
     }
+  })
+})
+
+describe('meetingDescription', () => {
+  it('mentions the real day shift of each local time', () => {
+    const description = meetingDescription(
+      '2026-11-13',
+      [{ city: 'Paris' }, { city: 'Tokyo' }, { city: 'Kiritimati' }],
+      [
+        { year: 2026, month: 11, day: 13, hour: 23, minute: 0, weekday: 'Fri' },
+        { year: 2026, month: 11, day: 14, hour: 6, minute: 0, weekday: 'Sat' },
+        { year: 2026, month: 11, day: 11, hour: 23, minute: 0, weekday: 'Wed' },
+      ],
+    )
+
+    expect(description).toContain('23h — Paris')
+    expect(description).toContain('6h (+1 jour) — Tokyo')
+    expect(description).toContain('23h (−2 jours) — Kiritimati')
+  })
+})
+
+describe('buildIcs URL safety', () => {
+  it('neutralises line injection through the shared URL', () => {
+    const ics = buildIcs({
+      start: Date.UTC(2026, 10, 14, 14),
+      end: Date.UTC(2026, 10, 14, 15),
+      title: 'Point',
+      url: 'https://unanime.app/?z=Europe/Paris\r\nSUMMARY:Injecté',
+      uid: 'safe-url',
+      now: Date.UTC(2026, 10, 13, 9, 30),
+    })
+
+    expect(ics.split('\r\n').filter((line) => line.startsWith('SUMMARY:'))).toHaveLength(1)
+    expect(ics).not.toMatch(/[^\r]\r[^\n]/)
   })
 })
 

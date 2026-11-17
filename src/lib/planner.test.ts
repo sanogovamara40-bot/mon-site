@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { bestWindow, buildColumns, defaultHour, leastConstrained, suggestColumns } from './planner'
+import {
+  bestWindow,
+  buildColumns,
+  defaultHour,
+  leastConstrained,
+  spanAvailability,
+  suggestColumns,
+} from './planner'
+import type { Column } from './planner'
 import type { Participant, WorkHours } from './planner'
 
 const paris: Participant = {
@@ -99,6 +107,84 @@ describe('buildColumns', () => {
     expect(fallback.available).toBe(2)
     expect(columns.every((column) => column.penalty >= fallback.penalty)).toBe(true)
     expect(defaultHour(columns)).toBe(23)
+  })
+})
+
+describe('buildColumns et changements d’heure', () => {
+  it('écarte l’heure inexistante du passage à l’heure d’été', () => {
+    const columns = buildColumns('2026-03-29', 'Europe/Paris', [paris], officeHours)
+
+    expect(columns).toHaveLength(23)
+    expect(columns.some((column) => column.hour === 2)).toBe(false)
+    expect(new Set(columns.map((column) => column.instant)).size).toBe(columns.length)
+    expect(columns.map((column) => column.hour)).toContain(1)
+    expect(columns.map((column) => column.hour)).toContain(3)
+  })
+
+  it('conserve les deux 02:00 au passage à l’heure d’hiver', () => {
+    const columns = buildColumns('2026-10-25', 'Europe/Paris', [paris], officeHours)
+
+    expect(columns).toHaveLength(25)
+    expect(new Set(columns.map((column) => column.instant)).size).toBe(columns.length)
+    expect(columns.filter((column) => column.hour === 2)).toHaveLength(2)
+  })
+
+  it('génère des instants UTC strictement consécutifs', () => {
+    for (const date of ['2026-03-29', '2026-10-25', '2026-11-13']) {
+      const columns = buildColumns(date, 'Europe/Paris', [paris], officeHours)
+      for (let index = 1; index < columns.length; index += 1) {
+        expect(columns[index].instant - columns[index - 1].instant).toBe(3_600_000)
+      }
+    }
+  })
+})
+
+describe('durée de la réunion', () => {
+  it('n’annonce un recouvrement que s’il contient toute la durée', () => {
+    const columns = buildColumns('2026-11-13', 'Europe/Paris', [paris, tokyo], officeHours)
+
+    expect(bestWindow(columns, 60)).toEqual({ start: 9, end: 10 })
+    expect(bestWindow(columns, 90)).toBeNull()
+    expect(bestWindow(columns, 30)).toEqual({ start: 9, end: 10 })
+  })
+
+  it('retombe sur le créneau le moins contraignant sur toute la durée', () => {
+    const column = (hour: number, penalty: number, available: number): Column => ({
+      hour,
+      instant: hour * 3_600_000,
+      parts: [],
+      penalty,
+      available,
+      everyoneFree: false,
+    })
+    const columns = [
+      column(0, 0, 1),
+      column(1, 10, 0),
+      column(2, 2, 1),
+      column(3, 0, 1),
+    ]
+
+    expect(leastConstrained(columns, 60).hour).toBe(0)
+    expect(leastConstrained(columns, 90).hour).toBe(2)
+    expect(spanAvailability(columns, columns[0], 90)).toBe(0)
+    expect(spanAvailability(columns, columns[2], 90)).toBe(1)
+    expect(spanAvailability(columns, columns[3], 90)).toBe(0)
+    expect(suggestColumns(columns, 1, 90)[0].hour).toBe(2)
+  })
+
+  it('garde le créneau par défaut dans la fenêtre commune pour 90 minutes', () => {
+    const columns = buildColumns(
+      '2026-11-13',
+      'Europe/Paris',
+      [paris, london, newYork],
+      officeHours,
+    )
+    const window = bestWindow(columns, 90)
+    const hour = defaultHour(columns, 90)
+
+    expect(window).not.toBeNull()
+    expect(hour).toBeGreaterThanOrEqual(window!.start)
+    expect(hour + 2).toBeLessThanOrEqual(window!.end)
   })
 })
 

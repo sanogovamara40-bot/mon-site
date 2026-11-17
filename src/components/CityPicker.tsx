@@ -3,6 +3,7 @@ import { searchCities } from '../data/cities'
 import type { City } from '../data/cities'
 import { offsetLabel } from '../lib/time'
 import { CheckIcon, SearchIcon } from './Icons'
+import { nextActiveIndex } from './cityPickerKeys'
 
 type CityPickerProps = {
   selectedZones: string[]
@@ -37,14 +38,10 @@ export function CityPicker({ selectedZones, now, onSelect }: CityPickerProps) {
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'ArrowDown') {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       setOpen(true)
-      if (results.length) setActiveIndex((index) => (index + 1) % results.length)
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      setOpen(true)
-      if (results.length) setActiveIndex((index) => (index - 1 + results.length) % results.length)
+      if (results.length) setActiveIndex(nextActiveIndex(event.key, active, results.length, open))
     } else if (event.key === 'Enter') {
       event.preventDefault()
       const city = results[active]

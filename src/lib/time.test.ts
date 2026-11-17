@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   dayOffset,
+  dayShiftLabel,
   formatDateLabel,
   formatTime,
   offsetLabel,
@@ -66,6 +67,16 @@ describe('date helpers', () => {
     const lateUtc = Date.UTC(2026, 10, 13, 23, 30)
     expect(todayKey('Europe/Paris', lateUtc)).toBe('2026-11-14')
     expect(todayKey('America/New_York', lateUtc)).toBe('2026-11-13')
+  })
+})
+
+describe('dayShiftLabel', () => {
+  it('states the real shift, including offsets beyond one day', () => {
+    expect(dayShiftLabel(0)).toBe('')
+    expect(dayShiftLabel(1)).toBe('+1 jour')
+    expect(dayShiftLabel(-1)).toBe('−1 jour')
+    expect(dayShiftLabel(2)).toBe('+2 jours')
+    expect(dayShiftLabel(-2)).toBe('−2 jours')
   })
 })
 

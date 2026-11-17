@@ -13,9 +13,17 @@ import {
 } from './components/Icons'
 import { findCity } from './data/cities'
 import type { City } from './data/cities'
-import { buildIcs, downloadIcs, icsFilename } from './lib/ics'
-import { bestWindow, buildColumns, defaultHour, leastConstrained, suggestColumns } from './lib/planner'
+import {
+  bestWindow,
+  buildColumns,
+  defaultColumn,
+  leastConstrained,
+  spanAvailability,
+  suggestColumns,
+} from './lib/planner'
 import type { Participant, WorkHours } from './lib/planner'
+import { buildIcs, downloadIcs, icsFilename, meetingDescription } from './lib/ics'
+import { resolveWorkHours, sanitizeWork } from './lib/settings'
 import {
   formatDateLabel,
   formatTime,
@@ -58,12 +66,6 @@ function isValidDateKey(key: string | null): key is string {
     date.getUTCMonth() === month - 1 &&
     date.getUTCDate() === day
   )
-}
-
-function sanitizeWork(start: number, end: number): WorkHours | null {
-  if (!Number.isInteger(start) || !Number.isInteger(end)) return null
-  if (start < 0 || end > 24 || start >= end) return null
-  return { start, end }
 }
 
 function sanitizeTitle(value: unknown): string {
@@ -131,10 +133,7 @@ function readBoot(): Boot {
   const zones = sourceZones.filter((zone, index) => sourceZones.indexOf(zone) === index)
 
   const participants = zones.map(cityForZone)
-  const work =
-    sanitizeWork(Number(params.get('s')), Number(params.get('e'))) ??
-    (stored ? sanitizeWork(stored.start, stored.end) : null) ??
-    DEFAULT_WORK
+  const work = resolveWorkHours(params, stored, DEFAULT_WORK)
 
   const anchorZone = participants[0]?.zone ?? 'Europe/Paris'
   const dateParam = params.get('d')
@@ -183,7 +182,7 @@ function App() {
   const [dateKey, setDateKey] = useState(boot.dateKey)
   const [title, setTitle] = useState(boot.title)
   const [duration, setDuration] = useState(boot.duration)
-  const [selectedHour, setSelectedHour] = useState<number | null>(null)
+  const [selectedInstant, setSelectedInstant] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [toast, setToast] = useState<string | null>(null)
 
@@ -232,45 +231,63 @@ function App() {
     () => buildColumns(dateKey, anchor.zone, participants, work),
     [dateKey, anchor.zone, participants, work],
   )
-  const best = useMemo(() => bestWindow(columns), [columns])
-  const autoHour = useMemo(() => defaultHour(columns), [columns])
-  const effectiveHour =
-    selectedHour !== null && columns.some((column) => column.hour === selectedHour)
-      ? selectedHour
-      : autoHour
-  const selected = columns.find((column) => column.hour === effectiveHour) ?? columns[0]
-  const suggestions = useMemo(() => suggestColumns(columns), [columns])
-  const fallback = useMemo(() => leastConstrained(columns), [columns])
+  const best = useMemo(() => bestWindow(columns, duration), [columns, duration])
+  const auto = useMemo(() => defaultColumn(columns, duration), [columns, duration])
+  const effectiveInstant =
+    selectedInstant !== null && columns.some((column) => column.instant === selectedInstant)
+      ? selectedInstant
+      : auto.instant
+  const selected = columns.find((column) => column.instant === effectiveInstant) ?? columns[0]
+  const suggestions = useMemo(() => suggestColumns(columns, 3, duration), [columns, duration])
+  const fallback = useMemo(() => leastConstrained(columns, duration), [columns, duration])
+  const fallbackAvailability = useMemo(
+    () => spanAvailability(columns, fallback, duration),
+    [columns, fallback, duration],
+  )
+
+  const bestRange = best
+    ? {
+        from: formatTime(columns[best.start].parts[0]),
+        to: formatTime(
+          zoneParts(
+            best.end < columns.length
+              ? columns[best.end].instant
+              : columns[columns.length - 1].instant + 3_600_000,
+            anchor.zone,
+          ),
+        ),
+      }
+    : null
 
   const addParticipant = (city: City) => {
     setParticipants((current) =>
       current.some((participant) => participant.zone === city.zone) ? current : [...current, city],
     )
-    setSelectedHour(null)
+    setSelectedInstant(null)
   }
 
   const removeParticipant = (zone: string) => {
     setParticipants((current) =>
       current.length <= 1 ? current : current.filter((participant) => participant.zone !== zone),
     )
-    setSelectedHour(null)
+    setSelectedInstant(null)
   }
 
   const updateStart = (value: number) => {
     const start = Math.min(Math.max(value, 0), 23)
     setWork({ start, end: Math.max(work.end, start + 1) })
-    setSelectedHour(null)
+    setSelectedInstant(null)
   }
 
   const updateEnd = (value: number) => {
     const end = Math.min(Math.max(value, 1), 24)
     setWork({ start: Math.min(work.start, end - 1), end })
-    setSelectedHour(null)
+    setSelectedInstant(null)
   }
 
   const changeDate = (nextDate: string) => {
     setDateKey(nextDate)
-    setSelectedHour(null)
+    setSelectedInstant(null)
   }
 
   const share = async () => {
@@ -292,15 +309,7 @@ function App() {
   const exportIcs = () => {
     const start = selected.instant
     const end = start + duration * 60_000
-    const description = [
-      formatDateLabel(dateKey),
-      ...participants.map(
-        (participant, index) =>
-          `${formatTime(selected.parts[index])} — ${participant.city}`,
-      ),
-      '',
-      'Créé avec Unanime',
-    ].join('\n')
+    const description = meetingDescription(dateKey, participants, selected.parts)
 
     const content = buildIcs({
       start,
@@ -513,9 +522,11 @@ function App() {
               <div className="best__body">
                 <p className="eyebrow">Meilleur créneau</p>
                 <p className="best__value">
-                  {best.start}h – {best.end}h <span>à {anchor.city}</span>
+                  {bestRange?.from} – {bestRange?.to} <span>à {anchor.city}</span>
                 </p>
-                <p className="best__hint">Tout le monde est dans ses horaires de bureau.</p>
+                <p className="best__hint">
+                  Tout le monde est dans ses horaires de bureau pendant toute la durée de la réunion.
+                </p>
               </div>
               <span className="pill pill--ok">{best.end - best.start} h de recouvrement</span>
             </div>
@@ -530,12 +541,12 @@ function App() {
                   Le moins contraignant : {fallback.hour}h <span>à {anchor.city}</span>
                 </p>
                 <p className="best__hint">
-                  Aucune heure ne tombe dans toutes les plages de bureau — ces suggestions
-                  minimisent le décalage.
+                  Aucun créneau de cette durée ne tombe dans toutes les plages de bureau —
+                  ces suggestions minimisent le décalage.
                 </p>
               </div>
               <span className="pill pill--warn">
-                {fallback.available}/{participants.length} dispo
+                {fallbackAvailability}/{participants.length} dispo
               </span>
             </div>
           )}
@@ -544,11 +555,11 @@ function App() {
             <span className="suggestions__label">Suggestions</span>
             {suggestions.map((column) => (
               <button
-                key={column.hour}
+                key={column.instant}
                 type="button"
-                className={`suggestion ${column.hour === effectiveHour ? 'is-active' : ''}`}
-                aria-pressed={column.hour === effectiveHour}
-                onClick={() => setSelectedHour(column.hour)}
+                className={`suggestion ${column.instant === effectiveInstant ? 'is-active' : ''}`}
+                aria-pressed={column.instant === effectiveInstant}
+                onClick={() => setSelectedInstant(column.instant)}
               >
                 <span className="suggestion__time">{formatTime(column.parts[0])}</span>
                 <span className="suggestion__meta">
@@ -562,9 +573,9 @@ function App() {
             participants={participants}
             columns={columns}
             work={work}
-            selectedHour={effectiveHour}
+            selectedInstant={effectiveInstant}
             best={best}
-            onSelectHour={setSelectedHour}
+            onSelectInstant={setSelectedInstant}
           />
 
           <div className="legend">

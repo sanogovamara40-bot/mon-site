@@ -101,6 +101,13 @@ export function dayOffset(fromKey: string, toKey: string): number {
   return Math.round((toStamp - fromStamp) / 86_400_000)
 }
 
+/** Human-readable day shift; offsets between zones can exceed 24 hours (±2 days). */
+export function dayShiftLabel(shift: number): string {
+  if (shift === 0) return ''
+  const days = Math.abs(shift)
+  return `${shift > 0 ? '+' : '−'}${days} jour${days > 1 ? 's' : ''}`
+}
+
 export function formatTime(parts: Pick<ZoneParts, 'hour' | 'minute'>): string {
   return parts.minute === 0 ? `${parts.hour}h` : `${parts.hour}h${pad(parts.minute)}`
 }

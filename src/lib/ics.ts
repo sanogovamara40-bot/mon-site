@@ -1,3 +1,6 @@
+import { dateKeyOf, dayOffset, dayShiftLabel, formatDateLabel, formatTime } from './time'
+import type { ZoneParts } from './time'
+
 const CRLF = '\r\n'
 const MAX_LINE_BYTES = 75
 const encoder = new TextEncoder()
@@ -44,6 +47,24 @@ export function foldIcsLine(line: string): string {
 
   parts.push(current)
   return parts.join(CRLF)
+}
+
+/** Local times in the description carry their day shift relative to the anchor date. */
+export function meetingDescription(
+  dateKey: string,
+  participants: { city: string }[],
+  parts: ZoneParts[],
+): string {
+  return [
+    formatDateLabel(dateKey),
+    ...participants.map((participant, index) => {
+      const shift = dayOffset(dateKey, dateKeyOf(parts[index]))
+      const label = dayShiftLabel(shift)
+      return `${formatTime(parts[index])}${label ? ` (${label})` : ''} — ${participant.city}`
+    }),
+    '',
+    'Créé avec Unanime',
+  ].join('\n')
 }
 
 export type IcsEvent = {
