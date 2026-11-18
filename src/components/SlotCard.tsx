@@ -1,10 +1,21 @@
-import { dateKeyOf, dayOffset, dayShiftLabel, formatDateLabel, formatTime, offsetLabel } from '../lib/time'
+import {
+  dateKeyOf,
+  dayOffset,
+  dayShiftLabel,
+  formatDateLabel,
+  formatTime,
+  offsetLabel,
+  zoneParts,
+} from '../lib/time'
+import { fitsWorkHours } from '../lib/planner'
 import type { Column, Participant, WorkHours } from '../lib/planner'
 import { CalendarPlusIcon, CopyIcon } from './Icons'
 
 type SlotCardProps = {
   participants: Participant[]
   column: Column
+  /** Participants within their working hours for the whole meeting, not just its start. */
+  availability: number
   dateKey: string
   work: WorkHours
   title: string
@@ -24,6 +35,7 @@ function durationLabel(minutes: number): string {
 export function SlotCard({
   participants,
   column,
+  availability,
   dateKey,
   work,
   title,
@@ -32,9 +44,11 @@ export function SlotCard({
   onExport,
 }: SlotCardProps) {
   const anchorDate = dateKeyOf(column.parts[0])
-  const status = column.everyoneFree
+  const endInstant = column.instant + duration * 60_000
+  const everyoneAvailable = availability === participants.length
+  const status = everyoneAvailable
     ? 'Tout le monde est disponible'
-    : `${column.available}/${participants.length} dans les horaires`
+    : `${availability}/${participants.length} dans les horaires`
 
   return (
     <section className="slot" aria-label="Détail du créneau sélectionné">
@@ -49,15 +63,14 @@ export function SlotCard({
             {formatDateLabel(dateKey)} · {durationLabel(duration)}
           </p>
         </div>
-        <span className={`pill ${column.everyoneFree ? 'pill--ok' : 'pill--warn'}`}>{status}</span>
+        <span className={`pill ${everyoneAvailable ? 'pill--ok' : 'pill--warn'}`}>{status}</span>
       </div>
 
       <div className="slot__people">
         {participants.map((participant, index) => {
           const part = column.parts[index]
           const shift = dayOffset(anchorDate, dateKeyOf(part))
-          const minutes = part.hour * 60 + part.minute
-          const inWork = minutes >= work.start * 60 && minutes < work.end * 60
+          const inWork = fitsWorkHours(part, zoneParts(endInstant, participant.zone), work)
 
           return (
             <div className="slot__person" key={participant.zone}>

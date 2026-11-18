@@ -61,7 +61,7 @@ export function CityPicker({ selectedZones, now, onSelect }: CityPickerProps) {
         type="text"
         role="combobox"
         aria-expanded={open}
-        aria-controls="city-listbox"
+        aria-controls={open ? 'city-listbox' : undefined}
         aria-autocomplete="list"
         aria-activedescendant={open && active >= 0 ? `city-option-${active}` : undefined}
         aria-label="Ajouter une ville"

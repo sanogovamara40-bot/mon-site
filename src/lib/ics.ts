@@ -26,6 +26,18 @@ export function escapeIcsText(value: string): string {
 }
 
 /**
+ * URL est une propriété de type URI, pas TEXT : les virgules de `?z=Paris,Tokyo`
+ * doivent rester littérales. Seuls les caractères interdits sont encodés, ce qui
+ * empêche aussi toute injection de ligne par une URL hostile.
+ */
+export function escapeIcsUri(value: string): string {
+  return value
+    .replace(/\\/g, '%5C')
+    .replace(/\r/g, '%0D')
+    .replace(/\n/g, '%0A')
+}
+
+/**
  * RFC 5545 line folding: no line may exceed 75 octets, continuation lines
  * start with a single space. Characters are never split mid-codepoint.
  */
@@ -99,7 +111,7 @@ export function buildIcs(event: IcsEvent): string {
   ]
 
   if (event.description) lines.push(`DESCRIPTION:${escapeIcsText(event.description)}`)
-  if (event.url) lines.push(`URL:${escapeIcsText(event.url)}`)
+  if (event.url) lines.push(`URL:${escapeIcsUri(event.url)}`)
 
   lines.push('STATUS:CONFIRMED', 'TRANSP:OPAQUE', 'END:VEVENT', 'END:VCALENDAR')
 

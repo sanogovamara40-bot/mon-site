@@ -3,12 +3,14 @@ import {
   bestWindow,
   buildColumns,
   defaultHour,
+  fitsWorkHours,
   leastConstrained,
   spanAvailability,
   suggestColumns,
 } from './planner'
 import type { Column } from './planner'
 import type { Participant, WorkHours } from './planner'
+import { zoneParts } from './time'
 
 const paris: Participant = {
   city: 'Paris',
@@ -39,6 +41,12 @@ const sanFrancisco: Participant = {
   country: 'États-Unis',
   countryCode: 'US',
   zone: 'America/Los_Angeles',
+}
+const mumbai: Participant = {
+  city: 'Mumbai',
+  country: 'Inde',
+  countryCode: 'IN',
+  zone: 'Asia/Kolkata',
 }
 
 const officeHours: WorkHours = { start: 9, end: 18 }
@@ -95,6 +103,26 @@ describe('buildColumns', () => {
     expect(bestWindow(columns)).toEqual({ start: 0, end: 24 })
   })
 
+  it('juge chaque ville sur sa propre date locale, pas sur celle de l’ancrage', () => {
+    const lordHowe = {
+      city: 'Lord Howe',
+      country: 'Australie',
+      countryCode: '··',
+      zone: 'Australia/Lord_Howe',
+    }
+    const columns = buildColumns('2026-04-05', lordHowe.zone, [lordHowe, newYork], officeHours)
+    const column = columns.find(
+      (entry) => entry.parts[0].hour === 8 && entry.parts[0].minute === 30,
+    )
+
+    // À 8h30 à Lord Howe, New York est à 18h la veille : ni l'un ni l'autre
+    // n'est disponible, mais l'écart aux horaires reste minime (30 min + 1 min).
+    expect(column).toBeDefined()
+    expect(column!.parts[1]).toMatchObject({ day: 4, hour: 18, minute: 0 })
+    expect(column!.penalty).toBe(31)
+    expect(leastConstrained(columns).instant).toBe(column!.instant)
+  })
+
   it('recommends the truly least constrained hour without a shared window', () => {
     const columns = buildColumns('2026-11-16', 'Europe/Paris', [paris, london, newYork], {
       start: 22,
@@ -139,13 +167,64 @@ describe('buildColumns et changements d’heure', () => {
   })
 })
 
+describe('durée de la réunion et décalage à la demi-heure', () => {
+  const work: WorkHours = { start: 9, end: 18 }
+  const dateKey = '2026-11-13'
+  const columns = buildColumns(dateKey, 'Europe/Paris', [paris, mumbai], work, 60)
+  const at = (hour: number, minute: number) =>
+    columns.find(
+      (column) => column.parts[1].hour === hour && column.parts[1].minute === minute,
+    )!
+
+  it('ne déclare pas disponible une réunion qui dépasse la fin des horaires', () => {
+    const late = at(17, 30) // 17:30 → 18:30 à Mumbai, bureau fermé à 18h.
+
+    expect(late.parts[0]).toMatchObject({ hour: 13, minute: 0 })
+    expect(late.available).toBe(1)
+    expect(late.everyoneFree).toBe(false)
+    expect(late.penalty).toBe(30)
+    expect(spanAvailability(columns, late, 60)).toBe(1)
+    expect(bestWindow(columns, 60)).toEqual({ start: 9, end: 13 })
+  })
+
+  it('accepte une réunion qui se termine exactement à la fermeture', () => {
+    const fits = at(16, 30) // 16:30 → 17:30 à Mumbai.
+
+    expect(fits.available).toBe(2)
+    expect(fits.everyoneFree).toBe(true)
+    expect(fits.penalty).toBe(0)
+    expect(
+      fitsWorkHours(fits.parts[1], zoneParts(fits.instant + 60 * 60_000, mumbai.zone), work),
+    ).toBe(true)
+  })
+
+  it('garde une journée complète disponible après minuit local', () => {
+    const fullDay = buildColumns(
+      dateKey,
+      'Europe/Paris',
+      [paris, mumbai],
+      { start: 0, end: 24 },
+      60,
+    )
+    const overnight = fullDay.find(
+      (column) => column.parts[1].hour === 23 && column.parts[1].minute === 30,
+    )!
+
+    expect(overnight.parts[1]).toMatchObject({ hour: 23, minute: 30 })
+    expect(overnight.available).toBe(2)
+    expect(overnight.penalty).toBe(0)
+    expect(overnight.everyoneFree).toBe(true)
+  })
+})
+
 describe('durée de la réunion', () => {
   it('n’annonce un recouvrement que s’il contient toute la durée', () => {
-    const columns = buildColumns('2026-11-13', 'Europe/Paris', [paris, tokyo], officeHours)
+    const columnsFor = (duration: number) =>
+      buildColumns('2026-11-13', 'Europe/Paris', [paris, tokyo], officeHours, duration)
 
-    expect(bestWindow(columns, 60)).toEqual({ start: 9, end: 10 })
-    expect(bestWindow(columns, 90)).toBeNull()
-    expect(bestWindow(columns, 30)).toEqual({ start: 9, end: 10 })
+    expect(bestWindow(columnsFor(60), 60)).toEqual({ start: 9, end: 10 })
+    expect(bestWindow(columnsFor(90), 90)).toBeNull()
+    expect(bestWindow(columnsFor(30), 30)).toEqual({ start: 9, end: 10 })
   })
 
   it('retombe sur le créneau le moins contraignant sur toute la durée', () => {
@@ -166,10 +245,28 @@ describe('durée de la réunion', () => {
 
     expect(leastConstrained(columns, 60).hour).toBe(0)
     expect(leastConstrained(columns, 90).hour).toBe(2)
-    expect(spanAvailability(columns, columns[0], 90)).toBe(0)
+    expect(spanAvailability(columns, columns[0], 90)).toBe(1)
     expect(spanAvailability(columns, columns[2], 90)).toBe(1)
-    expect(spanAvailability(columns, columns[3], 90)).toBe(0)
+    expect(spanAvailability(columns, columns[3], 90)).toBe(1)
+    expect(spanAvailability(columns, columns[1], 90)).toBe(0)
+    expect(spanAvailability(columns, columns[3], 0)).toBe(0)
     expect(suggestColumns(columns, 1, 90)[0].hour).toBe(2)
+  })
+
+  it('reconnaît une fenêtre de 90 minutes tenant dans une seule colonne', () => {
+    const columns = buildColumns('2026-11-13', 'Europe/Paris', [paris], { start: 9, end: 11 }, 90)
+
+    expect(columns.find((column) => column.hour === 9)!.everyoneFree).toBe(true)
+    expect(bestWindow(columns, 90)).toEqual({ start: 9, end: 10 })
+    expect(defaultHour(columns, 90)).toBe(9)
+  })
+
+  it('ne sous-estime pas la disponibilité d’un créneau déjà jugé sur toute la durée', () => {
+    const columns = buildColumns('2026-11-13', 'Europe/Paris', [paris], { start: 9, end: 11 }, 90)
+    const slot = columns.find((column) => column.hour === 9)!
+
+    expect(slot.available).toBe(1)
+    expect(spanAvailability(columns, slot, 90)).toBe(1)
   })
 
   it('garde le créneau par défaut dans la fenêtre commune pour 90 minutes', () => {
@@ -178,6 +275,7 @@ describe('durée de la réunion', () => {
       'Europe/Paris',
       [paris, london, newYork],
       officeHours,
+      90,
     )
     const window = bestWindow(columns, 90)
     const hour = defaultHour(columns, 90)

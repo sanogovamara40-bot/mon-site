@@ -151,6 +151,13 @@ const boot = readBoot()
 
 const formatHourOption = (hour: number) => `${String(hour).padStart(2, '0')}:00`
 
+const formatOverlap = (minutes: number) => {
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return rest === 0 ? `${hours} h` : `${hours} h ${String(rest).padStart(2, '0')}`
+}
+
 async function copyText(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard?.writeText) {
@@ -228,33 +235,43 @@ function App() {
 
   const anchor = participants[0] ?? cityForZone('Europe/Paris')
   const columns = useMemo(
-    () => buildColumns(dateKey, anchor.zone, participants, work),
-    [dateKey, anchor.zone, participants, work],
+    () => buildColumns(dateKey, anchor.zone, participants, work, duration),
+    [dateKey, anchor.zone, participants, work, duration],
   )
   const best = useMemo(() => bestWindow(columns, duration), [columns, duration])
-  const auto = useMemo(() => defaultColumn(columns, duration), [columns, duration])
+  const auto = useMemo(
+    () => (columns.length > 0 ? defaultColumn(columns, duration) : null),
+    [columns, duration],
+  )
   const effectiveInstant =
     selectedInstant !== null && columns.some((column) => column.instant === selectedInstant)
       ? selectedInstant
-      : auto.instant
-  const selected = columns.find((column) => column.instant === effectiveInstant) ?? columns[0]
+      : auto?.instant ?? null
+  const selected = columns.find((column) => column.instant === effectiveInstant) ?? auto
+  const selectedAvailability = useMemo(
+    () => (selected ? spanAvailability(columns, selected, duration) : 0),
+    [columns, selected, duration],
+  )
   const suggestions = useMemo(() => suggestColumns(columns, 3, duration), [columns, duration])
-  const fallback = useMemo(() => leastConstrained(columns, duration), [columns, duration])
+  const fallback = useMemo(
+    () => (columns.length > 0 ? leastConstrained(columns, duration) : null),
+    [columns, duration],
+  )
   const fallbackAvailability = useMemo(
-    () => spanAvailability(columns, fallback, duration),
+    () => (fallback ? spanAvailability(columns, fallback, duration) : 0),
     [columns, fallback, duration],
   )
 
-  const bestRange = best
+  // Chaque colonne libre couvre déjà toute la durée : au-delà de 60 min, les
+  // colonnes consécutives prolongent la fenêtre de la durée d'une réunion.
+  const overlapMinutes = best
+    ? (duration >= 60 ? (best.end - best.start - 1) * 60 : 0) + duration
+    : 0
+  const bestRange = best && selected
     ? {
         from: formatTime(columns[best.start].parts[0]),
         to: formatTime(
-          zoneParts(
-            best.end < columns.length
-              ? columns[best.end].instant
-              : columns[columns.length - 1].instant + 3_600_000,
-            anchor.zone,
-          ),
+          zoneParts(columns[best.start].instant + overlapMinutes * 60_000, anchor.zone),
         ),
       }
     : null
@@ -296,6 +313,7 @@ function App() {
   }
 
   const copySummary = async () => {
+    if (!selected) return
     const summary = [
       `${title.trim() || 'Réunion'} — ${formatDateLabel(dateKey)}, ${formatTime(selected.parts[0])} (${participants[0]?.city})`,
       ...participants.map(
@@ -307,6 +325,7 @@ function App() {
   }
 
   const exportIcs = () => {
+    if (!selected) return
     const start = selected.instant
     const end = start + duration * 60_000
     const description = meetingDescription(dateKey, participants, selected.parts)
@@ -514,7 +533,11 @@ function App() {
             </div>
           </div>
 
-          {best ? (
+          {!selected || !fallback ? (
+            <p className="empty-date">
+              Cette date n'existe pas dans le fuseau de {anchor.city} : aucune heure locale à afficher.
+            </p>
+          ) : best ? (
             <div className="best">
               <span className="best__icon">
                 <SparkIcon />
@@ -528,7 +551,7 @@ function App() {
                   Tout le monde est dans ses horaires de bureau pendant toute la durée de la réunion.
                 </p>
               </div>
-              <span className="pill pill--ok">{best.end - best.start} h de recouvrement</span>
+              <span className="pill pill--ok">{formatOverlap(overlapMinutes)} de recouvrement</span>
             </div>
           ) : (
             <div className="best best--none">
@@ -538,7 +561,7 @@ function App() {
               <div className="best__body">
                 <p className="eyebrow">Pas de recouvrement parfait</p>
                 <p className="best__value">
-                  Le moins contraignant : {fallback.hour}h <span>à {anchor.city}</span>
+                  Le moins contraignant : {formatTime(fallback.parts[0])} <span>à {anchor.city}</span>
                 </p>
                 <p className="best__hint">
                   Aucun créneau de cette durée ne tombe dans toutes les plages de bureau —
@@ -551,59 +574,69 @@ function App() {
             </div>
           )}
 
-          <div className="suggestions" aria-label="Créneaux suggérés">
-            <span className="suggestions__label">Suggestions</span>
-            {suggestions.map((column) => (
-              <button
-                key={column.instant}
-                type="button"
-                className={`suggestion ${column.instant === effectiveInstant ? 'is-active' : ''}`}
-                aria-pressed={column.instant === effectiveInstant}
-                onClick={() => setSelectedInstant(column.instant)}
-              >
-                <span className="suggestion__time">{formatTime(column.parts[0])}</span>
-                <span className="suggestion__meta">
-                  {column.everyoneFree ? 'tout le monde' : `${column.available}/${participants.length} dispo`}
+          {selected && (
+            <>
+              <div className="suggestions" aria-label="Créneaux suggérés">
+                <span className="suggestions__label">Suggestions</span>
+                {suggestions.map((column) => {
+                  const available = spanAvailability(columns, column, duration)
+                  return (
+                    <button
+                      key={column.instant}
+                      type="button"
+                      className={`suggestion ${column.instant === effectiveInstant ? 'is-active' : ''}`}
+                      aria-pressed={column.instant === effectiveInstant}
+                      onClick={() => setSelectedInstant(column.instant)}
+                    >
+                      <span className="suggestion__time">{formatTime(column.parts[0])}</span>
+                      <span className="suggestion__meta">
+                        {available === participants.length
+                          ? 'tout le monde'
+                          : `${available}/${participants.length} dispo`}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <PlannerGrid
+                participants={participants}
+                columns={columns}
+                work={work}
+                selectedInstant={effectiveInstant}
+                best={best}
+                onSelectInstant={setSelectedInstant}
+              />
+
+              <div className="legend">
+                <span className="legend__item">
+                  <i className="legend__swatch is-work" />
+                  Dans les horaires
                 </span>
-              </button>
-            ))}
-          </div>
+                <span className="legend__item">
+                  <i className="legend__swatch is-common" />
+                  Tout le monde dispo
+                </span>
+                <span className="legend__item">
+                  <i className="legend__swatch is-off" />
+                  Hors horaires
+                </span>
+                <span className="legend__hint">Cliquez sur une heure pour comparer les villes.</span>
+              </div>
 
-          <PlannerGrid
-            participants={participants}
-            columns={columns}
-            work={work}
-            selectedInstant={effectiveInstant}
-            best={best}
-            onSelectInstant={setSelectedInstant}
-          />
-
-          <div className="legend">
-            <span className="legend__item">
-              <i className="legend__swatch is-work" />
-              Dans les horaires
-            </span>
-            <span className="legend__item">
-              <i className="legend__swatch is-common" />
-              Tout le monde dispo
-            </span>
-            <span className="legend__item">
-              <i className="legend__swatch is-off" />
-              Hors horaires
-            </span>
-            <span className="legend__hint">Cliquez sur une heure pour comparer les villes.</span>
-          </div>
-
-          <SlotCard
-            participants={participants}
-            column={selected}
-            dateKey={dateKey}
-            work={work}
-            title={title}
-            duration={duration}
-            onCopy={copySummary}
-            onExport={exportIcs}
-          />
+              <SlotCard
+                participants={participants}
+                column={selected}
+                availability={selectedAvailability}
+                dateKey={dateKey}
+                work={work}
+                title={title}
+                duration={duration}
+                onCopy={copySummary}
+                onExport={exportIcs}
+              />
+            </>
+          )}
         </section>
       </main>
 

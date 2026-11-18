@@ -1,4 +1,7 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { CityPicker } from './CityPicker'
 import { nextActiveIndex } from './cityPickerKeys'
 
 describe('nextActiveIndex', () => {
@@ -15,5 +18,16 @@ describe('nextActiveIndex', () => {
 
   it('stays at zero when there is no result', () => {
     expect(nextActiveIndex('ArrowDown', 0, 0, true)).toBe(0)
+  })
+})
+
+describe('CityPicker', () => {
+  it('ne référence la liste que lorsqu’elle est ouverte', () => {
+    const html = renderToStaticMarkup(
+      createElement(CityPicker, { selectedZones: [], now: 0, onSelect: () => {} }),
+    )
+
+    expect(html).toContain('aria-expanded="false"')
+    expect(html).not.toContain('aria-controls')
   })
 })

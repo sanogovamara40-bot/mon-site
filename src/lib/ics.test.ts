@@ -115,6 +115,20 @@ describe('meetingDescription', () => {
 })
 
 describe('buildIcs URL safety', () => {
+  it('garde les virgules de l’URL de partage (propriété URI, pas TEXT)', () => {
+    const url = 'https://unanime.app/?z=Europe%2FParis,America%2FNew_York&d=2026-11-14'
+    const ics = buildIcs({
+      start: Date.UTC(2026, 10, 14, 14),
+      end: Date.UTC(2026, 10, 14, 15),
+      title: 'Point',
+      url,
+      uid: 'uri-uid',
+    })
+
+    expect(ics).toContain(`URL:${url}`)
+    expect(ics).not.toContain('\\,')
+  })
+
   it('neutralises line injection through the shared URL', () => {
     const ics = buildIcs({
       start: Date.UTC(2026, 10, 14, 14),

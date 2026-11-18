@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { CSSProperties } from 'react'
 import { dateKeyOf, dayOffset, dayShiftLabel, formatTime } from '../lib/time'
 import type { Column, Participant, WorkHours } from '../lib/planner'
 
@@ -6,7 +7,7 @@ type PlannerGridProps = {
   participants: Participant[]
   columns: Column[]
   work: WorkHours
-  selectedInstant: number
+  selectedInstant: number | null
   best: { start: number; end: number } | null
   onSelectInstant: (instant: number) => void
 }
@@ -23,7 +24,7 @@ export function PlannerGrid({
   const anchorDate = dateKeyOf(anchorParts)
   const startMinutes = work.start * 60
   const endMinutes = work.end * 60
-  const gridClass = `grid--${columns.length}`
+  const gridStyle = { '--columns': columns.length } as CSSProperties
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export function PlannerGrid({
 
   return (
     <div className="grid-scroll" ref={scrollRef}>
-      <div className={`grid ${gridClass}`} role="group" aria-label="Heures locales par participant">
+      <div className="grid" style={gridStyle} role="group" aria-label="Heures locales par participant">
         <div className="grid__corner">
           <span className="grid__corner-label">Heure locale</span>
           <span className="grid__corner-city">{participants[0]?.city}</span>
